@@ -1,0 +1,55 @@
+version: "3"
+
+services:
+  pen-1:
+    image: penguintop/pen:beta
+    restart: unless-stopped
+    environment:
+      - PEN_API_ADDR
+      - PEN_BOOTNODE
+      - PEN_BOOTNODE_MODE
+      - PEN_CLEF_SIGNER_ENABLE
+      - PEN_CLEF_SIGNER_ENDPOINT=http://clef-1:8550
+      - PEN_CONFIG
+      - PEN_CORS_ALLOWED_ORIGINS
+      - PEN_DATA_DIR
+      - PEN_CACHE_CAPACITY
+      - PEN_DB_OPEN_FILES_LIMIT
+      - PEN_DB_BLOCK_CACHE_CAPACITY
+      - PEN_DB_WRITE_BUFFER_SIZE
+      - PEN_DB_DISABLE_SEEKS_COMPACTION
+      - PEN_DEBUG_API_ADDR
+      - PEN_DEBUG_API_ENABLE
+      - PEN_GATEWAY_MODE
+      - PEN_GLOBAL_PINNING_ENABLE
+      - PEN_NAT_ADDR
+      - PEN_NETWORK_ID
+      - PEN_P2P_ADDR
+      - PEN_P2P_QUIC_ENABLE
+      - PEN_P2P_WS_ENABLE
+      - PEN_PASSWORD
+      - PEN_PASSWORD_FILE
+      - PEN_PAYMENT_EARLY
+      - PEN_PAYMENT_THRESHOLD
+      - PEN_PAYMENT_TOLERANCE
+      - PEN_RESOLVER_OPTIONS
+      - PEN_STANDALONE
+      - PEN_SWAP_ENABLE
+      - PEN_SWAP_ENDPOINT
+      - PEN_SWAP_FACTORY_ADDRESS
+      - PEN_SWAP_INITIAL_DEPOSIT
+      - PEN_TRACING_ENABLE
+      - PEN_TRACING_ENDPOINT
+      - PEN_TRACING_SERVICE_NAME
+      - PEN_VERBOSITY
+      - PEN_WELCOME_MESSAGE
+    ports:
+      - "${API_ADDR:-1633}${PEN_API_ADDR:-:1633}"
+      - "${P2P_ADDR:-1634}${PEN_P2P_ADDR:-:1634}"
+      - "${DEBUG_API_ADDR:-127.0.0.1:1635}${PEN_DEBUG_API_ADDR:-:1635}"
+    volumes:
+      - pen-1:/home/pen/.pen
+    command: start
+
+volumes:
+  pen-1:

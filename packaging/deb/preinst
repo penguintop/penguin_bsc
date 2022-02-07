@@ -1,0 +1,20 @@
+#!/bin/sh -e
+
+if [ "$1" = "install" ]; then
+    if ! getent passwd pen > /dev/null; then
+        useradd -r -d /var/lib/pen -s /sbin/nologin -U pen
+    fi
+    if getent passwd pen-clef > /dev/null; then
+        usermod -a -G pen-clef pen > /dev/null
+    fi
+    if ! test -d /var/lib/pen; then
+        mkdir -p /var/lib/pen
+        chmod 0750 /var/lib/pen
+        chown -R pen:pen /var/lib/pen
+    fi
+    if ! test -f /var/lib/pen/password; then
+        < /dev/urandom tr -dc _A-Z-a-z-0-9 2> /dev/null | head -c32 > /var/lib/pen/password
+        chmod 0600 /var/lib/pen/password
+        chown pen:pen /var/lib/pen/password
+    fi
+fi

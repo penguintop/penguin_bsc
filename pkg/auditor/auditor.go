@@ -1,0 +1,211 @@
+package auditor
+
+import (
+	"crypto/elliptic"
+	"encoding/hex"
+	"fmt"
+	"github.com/btcsuite/btcd/btcec"
+	"github.com/penguintop/penguin_bsc/pkg/cac"
+	"github.com/penguintop/penguin_bsc/pkg/crypto"
+	"github.com/penguintop/penguin_bsc/pkg/localstore"
+	"github.com/penguintop/penguin_bsc/pkg/logging"
+	"math"
+	"time"
+)
+
+const (
+	//WAIT_SECONDS = 5 * 60
+	WAIT_SECONDS        = 10
+	AUDITOR_RPC_TIMEOUT = 10
+)
+
+type Auditor struct {
+	logger logging.Logger
+	//
+	AuditEndpoint string
+	// Local store db
+	LocalDB *localstore.DB
+
+	// Node address
+	PenguinAddress string
+	// Signer
+	Signer crypto.Signer
+	// Signer pubkey (hex)
+	SignerPubKey string
+	// Payer xwc address
+	XwcAcctAddress string
+
+	// chain identity for eth like chain
+	ChainID int64
+}
+
+func CreateNewAuditor(endpoint string, localDB *localstore.DB, signer crypto.Signer, chainID int64, logger logging.Logger) *Auditor {
+	r := new(Auditor)
+	r.AuditEndpoint = endpoint
+	r.LocalDB = localDB
+	r.Signer = signer
+	r.logger = logger
+
+	//r.SignerPubKey, _ = signer.CompressedPubKeyHex()
+
+	publicKey, _ := signer.PublicKey()
+	penguinAddr, _ := crypto.NewOverlayAddress(*publicKey, uint64(chainID))
+	r.PenguinAddress = penguinAddr.String()
+
+	pubBytes := elliptic.Marshal(btcec.S256(), publicKey.X, publicKey.Y)
+	r.SignerPubKey = hex.EncodeToString(pubBytes)
+
+	xwcAcctAddr, _ := signer.EthereumAddress()
+	r.XwcAcctAddress = xwcAcctAddr.String()
+	r.ChainID = chainID
+
+	return r
+}
+
+func (r *Auditor) Run() {
+	for {
+		time.Sleep(WAIT_SECONDS * time.Second)
+		r.logger.Infof("start audit at %s", time.Now().String())
+
+		// Dump retrieval keys
+		retrievalAddresses, err := r.LocalDB.DumpAllRetrievalKeys()
+		if err != nil {
+			r.logger.Errorf("DumpAllRetrievalKeys failed: %s", err.Error())
+			continue
+		}
+		if len(retrievalAddresses) == 0 {
+			r.logger.Warning("empty retrievalAddresses")
+			continue
+		}
+
+		paddingCnt := paddingCount(uint64(len(retrievalAddresses)))
+		retrievalAddresses = append(retrievalAddresses, retrievalAddresses[0:paddingCnt]...)
+		r.logger.Infof("After padding %d item, now retrievalAddresses size: %d", paddingCnt, len(retrievalAddresses))
+
+		treeDepth := int(math.Log2(float64(len(retrievalAddresses))))
+		r.logger.Infof("Your Contribution Weight is %d", treeDepth)
+
+		// Build full binary tree
+		treeRootNode, err := BuildBTreeFromRetrievalAddresses(retrievalAddresses)
+		if err != nil {
+			r.logger.Errorf("BuildBTreeFromRetrievalAddresses: %s", err.Error())
+			continue
+		}
+
+		// The first step, get server timestamp, and calc timestamp diff
+		serverTimestamp, err := RequestServerTimestamp(r.AuditEndpoint, AUDITOR_RPC_TIMEOUT)
+		if err != nil {
+			r.logger.Errorf("RequestServerTimestamp: %s", err.Error())
+			continue
+		}
+		nodeTimestamp := time.Now().Unix()
+		secondDiff := serverTimestamp - nodeTimestamp
+		r.logger.Infof("server timestamp: %d", serverTimestamp)
+		r.logger.Infof("time diff: %d seconds", secondDiff)
+
+		// The second step, get task
+		adjustTimestamp := time.Now().Unix() + secondDiff
+		adjustTimestampStr := fmt.Sprintf("%d", adjustTimestamp)
+		signature, err := r.Signer.SignForAudit([]byte(adjustTimestampStr))
+		if err != nil {
+			r.logger.Errorf("SignForAudit: %s", err.Error())
+			continue
+		}
+
+		taskId, err := RequestTask(r.AuditEndpoint, AUDITOR_RPC_TIMEOUT, adjustTimestamp, r.XwcAcctAddress, r.SignerPubKey, r.PenguinAddress, hex.EncodeToString(signature), r.ChainID)
+		if err != nil {
+			r.logger.Errorf("RequestTask: %s", err.Error())
+			continue
+		}
+
+		r.logger.Infof("RequestTask task id: %d", taskId)
+		// The third step, report merkle root
+		rootHashHex, nextHashHexPair := treeRootNode.GetRootRelatedHashHex()
+		pathData := make([][]string, 0)
+		pathData = append(pathData, []string{rootHashHex})
+		if !(nextHashHexPair == nil || len(nextHashHexPair) == 0) {
+			pathData = append(pathData, nextHashHexPair)
+		}
+
+		r.logger.Infof("Root hash: %s", rootHashHex)
+		if nextHashHexPair != nil && len(nextHashHexPair) == 2 {
+			r.logger.Infof("Root left son hash: %s", nextHashHexPair[0])
+			r.logger.Infof("Root right son hash: %s", nextHashHexPair[1])
+		}
+
+		taskIdStr := fmt.Sprintf("%d", taskId)
+		signature, err = r.Signer.SignForAudit([]byte(taskIdStr))
+		if err != nil {
+			r.logger.Errorf("SignForAudit: %s", err.Error())
+			continue
+		}
+		taskId, pathInt, err := RequestReportMerkleRoot(r.AuditEndpoint, AUDITOR_RPC_TIMEOUT, taskId, r.XwcAcctAddress, r.SignerPubKey,
+			r.PenguinAddress, hex.EncodeToString(signature), pathData, r.ChainID)
+		if err != nil {
+			r.logger.Errorf("RequestReportMerkleRoot: %s", err.Error())
+			continue
+		}
+		r.logger.Infof("RequestReportMerkleRoot task id: %d, path int: %d", taskId, pathInt)
+
+		// The fourth step, report path way data
+		rootHashHex, pathWayHexPairList, pathWayFinalNodeHashHex := treeRootNode.GetPathWayHashHex(pathInt)
+		pathData = make([][]string, 0)
+		pathData = append(pathData, []string{rootHashHex})
+		if !(nextHashHexPair == nil || len(nextHashHexPair) == 0) {
+			pathData = append(pathData, pathWayHexPairList...)
+		}
+
+		r.logger.Infof("Root Hash: %s", rootHashHex)
+		for _, pathWayHexPair := range pathWayHexPairList {
+			r.logger.Infof("L Son Hash: %s", pathWayHexPair[0])
+			r.logger.Infof("R son hash: %s", pathWayHexPair[1])
+		}
+		r.logger.Infof("Final Node Hash: %s", pathWayFinalNodeHashHex)
+		r.logger.Infof("Path Depth: %d", len(pathData))
+
+		pathWayFinalNodeHash, err := hex.DecodeString(pathWayFinalNodeHashHex)
+		if err != nil {
+			r.logger.Errorf("hex.DecodeString: %s", err.Error())
+			continue
+		}
+
+		item, err := r.LocalDB.GetRetrievalData(pathWayFinalNodeHash)
+		if err != nil {
+			r.logger.Errorf("GetRetrievalData: %s", err.Error())
+			continue
+		}
+		// Calculate item info by data, and verify it
+		chunk, err := cac.NewWithDataSpan(item.Data)
+		if chunk.Address().String() != pathWayFinalNodeHashHex {
+			r.logger.Errorf("chunk.Address().String() != pathWayFinalNodeHashHex")
+			continue
+		}
+
+		taskIdStr = fmt.Sprintf("%d", taskId)
+		signature, err = r.Signer.SignForAudit([]byte(taskIdStr))
+		if err != nil {
+			r.logger.Errorf("SignForAudit: %s", err.Error())
+			continue
+		}
+		err = RequestReportPathData(r.AuditEndpoint, AUDITOR_RPC_TIMEOUT, taskId, r.XwcAcctAddress, r.SignerPubKey,
+			r.PenguinAddress, hex.EncodeToString(signature), pathData,
+			hex.EncodeToString(item.Data), r.ChainID)
+		if err != nil {
+			r.logger.Warningf("RequestReportPathData: %s", err.Error())
+		}
+
+		// Done
+		r.logger.Infof("Audit end at %s", time.Now().String())
+	}
+}
+
+func paddingCount(val uint64) uint64 {
+	s := uint64(1)
+	for {
+		if s >= val {
+			return s - val
+		} else {
+			s = s << 1
+		}
+	}
+}

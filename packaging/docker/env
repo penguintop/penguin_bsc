@@ -1,0 +1,97 @@
+# Copy this file to .env, then update it with your own settings
+
+### CLEF
+
+## chain id to use for signing (1=mainnet, 3=ropsten, 4=rinkeby, 5=goerli) (default: 12345)
+CLEF_CHAINID=5
+
+### PEN
+
+## HTTP API listen address (default :1633)
+# PEN_API_ADDR=:1633
+## chain block time (default 15)
+# PEN_BLOCK_TIME=15
+## initial nodes to connect to
+# PEN_BOOTNODE=[]
+## cause the node to always accept incoming connections
+# PEN_BOOTNODE_MODE=false
+## enable clef signer
+PEN_CLEF_SIGNER_ENABLE=true
+## clef signer endpoint
+# PEN_CLEF_SIGNER_ENDPOINT=
+## config file (default is /home/<user>/.pen.yaml)
+# PEN_CONFIG=/home/pen/.pen.yaml
+## origins with CORS headers enabled
+# PEN_CORS_ALLOWED_ORIGINS=[]
+## data directory (default /home/<user>/.pen)
+# PEN_DATA_DIR=/home/pen/.pen
+## cache capacity in chunks, multiply by 4096 to get approximate capacity in bytes
+# PEN_CACHE_CAPACITY=1000000
+## number of open files allowed by database
+# PEN_DB_OPEN_FILES_LIMIT=200
+## size of block cache of the database in bytes
+# PEN_DB_BLOCK_CACHE_CAPACITY=33554432
+## size of the database write buffer in bytes
+# PEN_DB_WRITE_BUFFER_SIZE=33554432
+## disables db compactions triggered by seeks
+# PEN_DB_DISABLE_SEEKS_COMPACTION=false
+## debug HTTP API listen address (default :1635)
+# PEN_DEBUG_API_ADDR=:1635
+## enable debug HTTP API
+# PEN_DEBUG_API_ENABLE=false
+## disable a set of sensitive features in the api
+# PEN_GATEWAY_MODE=false
+## enable global pinning
+# PEN_GLOBAL_PINNING_ENABLE=false
+## cause the node to start in full mode
+# PEN_FULL_NODE=false
+## NAT exposed address
+# PEN_NAT_ADDR=
+## ID of the Penguin network (default 1)
+# PEN_NETWORK_ID=1
+## P2P listen address (default :1634)
+# PEN_P2P_ADDR=:1634
+## enable P2P QUIC protocol
+# PEN_P2P_QUIC_ENABLE=false
+## enable P2P WebSocket transport
+# PEN_P2P_WS_ENABLE=false
+## password for decrypting keys
+# PEN_PASSWORD=
+## path to a file that contains password for decrypting keys
+# PEN_PASSWORD_FILE=
+## amount in PEN below the peers payment threshold when we initiate settlement (default 1000000000000)
+# PEN_PAYMENT_EARLY=1000000000000
+## threshold in PEN where you expect to get paid from your peers (default 10000000000000)
+# PEN_PAYMENT_THRESHOLD=10000000000000
+## excess debt above payment threshold in PEN where you disconnect from your peer (default 10000000000000)
+# PEN_PAYMENT_TOLERANCE=10000000000000
+## postage stamp contract address
+# PEN_POSTAGE_STAMP_ADDRESS=
+## ENS compatible API endpoint for a TLD and with contract address, can be repeated, format [tld:][contract-addr@]url
+# PEN_RESOLVER_OPTIONS=[]
+## whether we want the node to start with no listen addresses for p2p
+# PEN_STANDALONE=false
+## enable swap (default true)
+# PEN_SWAP_ENABLE=true
+## swap ethereum blockchain endpoint (default ws://localhost:8546)
+# PEN_SWAP_ENDPOINT=ws://localhost:8546
+## swap factory address
+# PEN_SWAP_FACTORY_ADDRESS=
+## legacy swap factory addresses
+# PEN_SWAP_LEGACY_FACTORY_ADDRESSES=
+## initial deposit if deploying a new chequebook (default 10000000000000000)
+# PEN_SWAP_INITIAL_DEPOSIT=10000000000000000
+## gas price in wei to use for deployment and funding (default "")
+# PEN_SWAP_DEPLOYMENT_GAS_PRICE=
+## enable tracing
+# PEN_TRACING_ENABLE=false
+## endpoint to send tracing data (default 127.0.0.1:6831)
+# PEN_TRACING_ENDPOINT=127.0.0.1:6831
+## service name identifier for tracing (default pen)
+# PEN_TRACING_SERVICE_NAME=pen
+## proof-of-identity transaction hash
+# PEN_TRANSACTION=
+## log verbosity level 0=silent, 1=error, 2=warn, 3=info, 4=debug, 5=trace (default info)
+# PEN_VERBOSITY=info
+## send a welcome message string during handshakes
+# PEN_WELCOME_MESSAGE=

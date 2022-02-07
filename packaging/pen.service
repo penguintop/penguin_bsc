@@ -1,0 +1,16 @@
+[Unit]
+Description=Pen - Ethereum Penguin node
+Documentation=
+After=network.target
+
+[Service]
+EnvironmentFile=-/etc/default/pen
+NoNewPrivileges=true
+User=pen
+Group=pen
+ExecStart=/usr/bin/pen start --config /etc/pen/pen.yaml
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target
