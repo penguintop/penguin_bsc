@@ -24,6 +24,8 @@ const (
 
 	balanceCheckBackoffDuration = 20 * time.Second
 	balanceCheckMaxRetries      = 10
+
+	onePen = 100000000 // 8 decimals
 )
 
 func checkBalance(
@@ -59,7 +61,7 @@ func checkBalance(
 		insufficientETH := ethBalance.Cmp(minimumEth) < 0
 
 		if insufficientERC20 || insufficientETH {
-			neededERC20, mod := new(big.Int).DivMod(swapInitialDeposit, big.NewInt(10000000000000000), new(big.Int))
+			neededERC20, mod := new(big.Int).DivMod(swapInitialDeposit, big.NewInt(onePen), new(big.Int))
 			if mod.Cmp(big.NewInt(0)) > 0 {
 				// always round up the division as the bzzaar cannot handle decimals
 				neededERC20.Add(neededERC20, big.NewInt(1))

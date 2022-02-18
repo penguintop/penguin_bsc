@@ -232,11 +232,13 @@ func (c *factory) ERC20Address(ctx context.Context) (common.Address, error) {
 
 // DiscoverFactoryAddress returns the canonical factory for this chainID
 func DiscoverFactoryAddress(chainID int64) (currentFactory common.Address, legacyFactories []common.Address, found bool) {
-	if chainID == 377 {
+	/*if chainID == 377 {
 		// goerli
 		return common.HexToAddress("0x2bE9a2fB9aC05Cb1e782b2f063164afA76Ca5ae4"), []common.Address{
 			//common.HexToAddress(""),
 		}, true
-	}
-	return common.Address{}, nil, false
+	}//*/
+
+	// this is hard coded, set the simpleswapfactory contract address
+	return common.HexToAddress("0x4BfbFC01D24874fbC8306A83643CCFae6A4c2004"), []common.Address{}, true
 }
