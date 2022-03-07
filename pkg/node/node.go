@@ -154,7 +154,7 @@ type Options struct {
 
 const (
 	refreshRate = int64(1000000000000)
-	basePrice   = 1000000000
+	basePrice   = 10
 )
 
 func NewPen(addr string, penguinAddress penguin.Address, publicKey ecdsa.PublicKey, signer crypto.Signer, networkID uint64, logger logging.Logger, libp2pPrivateKey, pssPrivateKey *ecdsa.PrivateKey, o Options) (b *Pen, err error) {
